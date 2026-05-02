@@ -1,5 +1,6 @@
--- // JENZ HUB V3.3.2 | ULTRA PINK EDITION
--- // Premium UI Interface with real-time FPS Counter
+-- // JENZ HUB V1.0 | PINK EDITION
+-- // Optimized for Delta, Fluxus, & Hydrogen
+-- // Updated Physics & Aesthetic UI
 
 repeat task.wait() until game:IsLoaded()
 
@@ -8,14 +9,14 @@ local player = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- // GLOBAL SETTINGS
 _G.JENZ_SETTINGS = {
     Locking = false,
     HardLock = false, 
     WallCheck = false,
-    Smoothness = 0.5,
+    Smoothness = 1,
     FOV = 150,
     MaxSpeed = 75,
     SpeedEnabled = false,
@@ -29,289 +30,312 @@ _G.JENZ_SETTINGS = {
 }
 
 local camera = workspace.CurrentCamera
-local PinkTheme = Color3.fromRGB(255, 20, 147) -- Neon Pink
-local DarkBg = Color3.fromRGB(15, 15, 15)
-local AccentPink = Color3.fromRGB(60, 10, 40)
+local PinkTheme = Color3.fromRGB(255, 20, 147)
+local DarkBg = Color3.fromRGB(15, 10, 12)
 
 ----------------------------------------------------------------
--- // MODERN UI SYSTEM
+-- // UTILITIES
+----------------------------------------------------------------
+
+local function IsVisible(targetPart)
+    if not _G.JENZ_SETTINGS.WallCheck then return true end
+    local parts = camera:GetPartsObscuringTarget({targetPart.Position}, {player.Character, targetPart.Parent})
+    return #parts == 0
+end
+
+local function SendTaunt()
+    local message = "/JENZ HUB ON TOP"
+    local TextChatService = game:GetService("TextChatService")
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local channel = TextChatService.TextChannels.RBXGeneral
+        if channel then channel:SendAsync(message) end
+    else
+        pcall(function()
+            ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+        end)
+    end
+end
+
+----------------------------------------------------------------
+-- // MODERN PINK UI SYSTEM
 ----------------------------------------------------------------
 
 local MainGui = Instance.new("ScreenGui", CoreGui)
-MainGui.Name = "JENZ_ULTRA_HUB"
+MainGui.Name = "JENZ_HUB_V1"
 
+-- // Minimized Bar
+local MinimizedBar = Instance.new("TextButton", MainGui)
+MinimizedBar.Size = UDim2.new(0, 160, 0, 40)
+MinimizedBar.Position = UDim2.new(0.5, -80, 0, 20)
+MinimizedBar.BackgroundColor3 = DarkBg
+MinimizedBar.Text = "JENZ HUB (OPEN)"
+MinimizedBar.TextColor3 = PinkTheme
+MinimizedBar.Font = Enum.Font.GothamBold
+MinimizedBar.TextSize = 14
+MinimizedBar.Visible = false
+local MCorner = Instance.new("UICorner", MinimizedBar)
+local MStroke = Instance.new("UIStroke", MinimizedBar)
+MStroke.Color = PinkTheme
+MStroke.Thickness = 2
+
+-- // Main Frame
 local MainFrame = Instance.new("Frame", MainGui)
-MainFrame.Size = UDim2.new(0, 520, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 450, 0, 420)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -210)
 MainFrame.BackgroundColor3 = DarkBg
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- // UI Styling (Rounded & Glow)
+MainFrame.Active, MainFrame.Draggable = true, true 
 local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 12)
-
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = PinkTheme
-MainStroke.Thickness = 1.8
-MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+MainStroke.Thickness = 1.5
 
--- // TOP BAR (Title & FPS)
-local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.BackgroundTransparency = 1
-
-local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(0.5, 0, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "JENZ HUB PREMIUM"
-Title.TextColor3 = PinkTheme
+-- // Title Bar
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.Text = "  JENZ HUB | Premium"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(30, 10, 20)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
-Title.BackgroundTransparency = 1
 Title.TextXAlignment = Enum.TextXAlignment.Left
+local TCorner = Instance.new("UICorner", Title)
 
-local FPSLabel = Instance.new("TextLabel", TopBar)
-FPSLabel.Size = UDim2.new(0.5, -15, 1, 0)
-FPSLabel.Position = UDim2.new(0.5, 0, 0, 0)
-FPSLabel.Text = "FPS: 60"
-FPSLabel.TextColor3 = Color3.new(1, 1, 1)
-FPSLabel.Font = Enum.Font.Code
-FPSLabel.TextSize = 14
-FPSLabel.BackgroundTransparency = 1
-FPSLabel.TextXAlignment = Enum.TextXAlignment.Right
+local CloseBtn = Instance.new("TextButton", MainFrame)
+CloseBtn.Size, CloseBtn.Position = UDim2.new(0, 30, 0, 30), UDim2.new(1, -40, 0, 10)
+CloseBtn.BackgroundColor3, CloseBtn.Text = PinkTheme, "X"
+CloseBtn.TextColor3, CloseBtn.Font = Color3.new(1, 1, 1), Enum.Font.GothamBold
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
 
--- // FPS COUNTER LOGIC
-RunService.RenderStepped:Connect(function(dt)
-    FPSLabel.Text = "FPS: " .. math.floor(1/dt)
-end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false MinimizedBar.Visible = true end)
+MinimizedBar.MouseButton1Click:Connect(function() MainFrame.Visible = true MinimizedBar.Visible = false end)
 
--- // SIDEBAR
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 140, 1, -60)
-Sidebar.Position = UDim2.new(0, 10, 0, 50)
-Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+-- // Container
+local Container = Instance.new("ScrollingFrame", MainFrame)
+Container.Size, Container.Position = UDim2.new(1, -20, 1, -70), UDim2.new(0, 10, 0, 60)
+Container.BackgroundTransparency, Container.CanvasSize = 1, UDim2.new(0, 0, 2.5, 0)
+Container.ScrollBarThickness = 2
+Container.ScrollBarImageColor3 = PinkTheme
+local Layout = Instance.new("UIListLayout", Container)
+Layout.Padding = UDim.new(0, 10)
 
-local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-SidebarLayout.Padding = UDim.new(0, 5)
-SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- // PAGE CONTAINER
-local PageContainer = Instance.new("Frame", MainFrame)
-PageContainer.Size = UDim2.new(1, -170, 1, -60)
-PageContainer.Position = UDim2.new(0, 160, 0, 50)
-PageContainer.BackgroundTransparency = 1
-
-local function CreatePage(name)
-    local Page = Instance.new("ScrollingFrame", PageContainer)
-    Page.Name = name
-    Page.Size = UDim2.new(1, 0, 1, 0)
-    Page.BackgroundTransparency = 1
-    Page.Visible = false
-    Page.CanvasSize = UDim2.new(0, 0, 2, 0)
-    Page.ScrollBarThickness = 0
-    Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
-    return Page
-end
-
-local Pages = {
-    Combat = CreatePage("Combat"),
-    Movement = CreatePage("Movement"),
-    Visuals = CreatePage("Visuals")
-}
-
-local function SwitchTab(name)
-    for i, v in pairs(Pages) do
-        v.Visible = (i == name)
-    end
-end
-
-local function AddTabBtn(name)
-    local Btn = Instance.new("TextButton", Sidebar)
-    Btn.Size = UDim2.new(0.9, 0, 0, 35)
-    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Btn.Text = name
-    Btn.TextColor3 = Color3.new(1, 1, 1)
-    Btn.Font = Enum.Font.GothamMedium
-    Btn.TextSize = 14
-    Instance.new("UICorner", Btn)
+-- // UI Creation Functions
+local function CreateSlider(name, min, max, setting)
+    local sliderDragging = false
+    local SliderFrame = Instance.new("Frame", Container)
+    SliderFrame.Size, SliderFrame.BackgroundTransparency = UDim2.new(1, -10, 0, 55), 1
     
-    Btn.MouseButton1Click:Connect(function()
-        SwitchTab(name)
-        for _, other in pairs(Sidebar:GetChildren()) do
-            if other:IsA("TextButton") then other.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
-        end
-        Btn.BackgroundColor3 = PinkTheme
-    end)
-end
-
-AddTabBtn("Combat")
-AddTabBtn("Movement")
-AddTabBtn("Visuals")
-SwitchTab("Combat")
-
-----------------------------------------------------------------
--- // INTERFACE ELEMENTS
-----------------------------------------------------------------
-
-local function CreateToggle(parent, text, setting)
-    local Frame = Instance.new("TextButton", parent)
-    Frame.Size = UDim2.new(1, 0, 0, 40)
-    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    Frame.Text = "  " .. text
-    Frame.TextColor3 = Color3.new(1, 1, 1)
-    Frame.Font = Enum.Font.Gotham
-    Frame.TextSize = 13
-    Frame.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", Frame)
-
-    local Box = Instance.new("Frame", Frame)
-    Box.Size = UDim2.new(0, 18, 0, 18)
-    Box.Position = UDim2.new(1, -28, 0.5, -9)
-    Box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
-
-    Frame.MouseButton1Click:Connect(function()
-        _G.JENZ_SETTINGS[setting] = not _G.JENZ_SETTINGS[setting]
-        Box.BackgroundColor3 = _G.JENZ_SETTINGS[setting] and PinkTheme or Color3.fromRGB(40, 40, 40)
-    end)
-end
-
-local function CreateSlider(parent, text, min, max, setting)
-    local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(1, 0, 0, 50)
-    Frame.BackgroundTransparency = 1
-    
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, 0, 0, 20)
-    Label.Text = text .. ": " .. _G.JENZ_SETTINGS[setting]
-    Label.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-    Label.BackgroundTransparency = 1
-    Label.Font = Enum.Font.Gotham
-    Label.TextSize = 12
+    local Label = Instance.new("TextLabel", SliderFrame)
+    Label.Size, Label.Text, Label.TextColor3 = UDim2.new(1, 0, 0, 20), name .. ": " .. (_G.JENZ_SETTINGS[setting]), Color3.new(1, 1, 1)
+    Label.BackgroundTransparency, Label.Font, Label.TextSize = 1, Enum.Font.GothamMedium, 13
     Label.TextXAlignment = Enum.TextXAlignment.Left
 
-    local SliderBar = Instance.new("Frame", Frame)
-    SliderBar.Size = UDim2.new(1, -10, 0, 6)
-    SliderBar.Position = UDim2.new(0, 0, 0, 30)
-    SliderBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    Instance.new("UICorner", SliderBar)
+    local Background = Instance.new("Frame", SliderFrame)
+    Background.Size, Background.Position, Background.BackgroundColor3 = UDim2.new(1, 0, 0, 8), UDim2.new(0, 0, 0, 35), Color3.fromRGB(40, 40, 45)
+    Instance.new("UICorner", Background)
 
-    local Fill = Instance.new("Frame", SliderBar)
-    Fill.Size = UDim2.new((_G.JENZ_SETTINGS[setting]-min)/(max-min), 0, 1, 0)
-    Fill.BackgroundColor3 = PinkTheme
+    local Fill = Instance.new("Frame", Background)
+    Fill.BackgroundColor3, Fill.Size = PinkTheme, UDim2.new((_G.JENZ_SETTINGS[setting] - min) / (max - min), 0, 1, 0)
     Instance.new("UICorner", Fill)
-
-    local dragging = false
-    local function Update()
-        local m = UserInputService:GetMouseLocation()
-        local pos = math.clamp((m.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
+    
+    local function UpdateSlider(input)
+        local pos = math.clamp((input.Position.X - Background.AbsolutePosition.X) / Background.AbsoluteSize.X, 0, 1)
         Fill.Size = UDim2.new(pos, 0, 1, 0)
         local val = math.floor(min + (max - min) * pos)
-        _G.JENZ_SETTINGS[setting] = val
-        Label.Text = text .. ": " .. val
+        _G.JENZ_SETTINGS[setting] = (setting == "Smoothness" and val/100 or val)
+        Label.Text = name .. ": " .. val
     end
+    
+    Background.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliderDragging = true UpdateSlider(input) end end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliderDragging = false end end)
+    UserInputService.InputChanged:Connect(function(input) if sliderDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then UpdateSlider(input) end end)
+end
 
-    SliderBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            Update()
+local function CreateToggle(name, setting)
+    local Btn = Instance.new("TextButton", Container)
+    Btn.Size, Btn.TextColor3 = UDim2.new(1, -10, 0, 40), Color3.new(1, 1, 1)
+    Btn.Text, Btn.TextXAlignment = "  " .. name, Enum.TextXAlignment.Left
+    Btn.Font, Btn.TextSize = Enum.Font.GothamMedium, 14
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    local bCorner = Instance.new("UICorner", Btn)
+    local bStroke = Instance.new("UIStroke", Btn)
+    bStroke.Thickness = 1
+    bStroke.Color = Color3.fromRGB(60, 60, 65)
+
+    Btn.MouseButton1Click:Connect(function() _G.JENZ_SETTINGS[setting] = not _G.JENZ_SETTINGS[setting] end)
+    
+    RunService.RenderStepped:Connect(function() 
+        if _G.JENZ_SETTINGS[setting] then
+            Btn.BackgroundColor3 = Color3.fromRGB(60, 10, 40)
+            bStroke.Color = PinkTheme
+        else
+            Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+            bStroke.Color = Color3.fromRGB(60, 60, 65)
         end
     end)
 end
 
--- // ADDING FEATURES TO PAGES
-CreateToggle(Pages.Combat, "Aimbot Lock", "Locking")
-CreateToggle(Pages.Combat, "Wall Check", "WallCheck")
-CreateSlider(Pages.Combat, "Lock Smoothness", 1, 100, "Smoothness")
-CreateSlider(Pages.Combat, "FOV Size", 10, 800, "FOV")
-
-CreateToggle(Pages.Movement, "Speed Boost", "SpeedEnabled")
-CreateSlider(Pages.Movement, "Speed Power", 16, 250, "MaxSpeed")
-CreateToggle(Pages.Movement, "Infinite Jump", "InfJump")
-CreateSlider(Pages.Movement, "Jump Power", 30, 200, "JumpPower")
-
-CreateToggle(Pages.Visuals, "ESP Enabled", "ESPEnabled")
+-- // ASSEMBLE UI ELEMENTS
+CreateToggle("Aimbot Lock", "Locking")
+CreateToggle("Wall Check", "WallCheck")
+CreateToggle("Stick to Enemies", "HardLock")
+CreateSlider("Lock Smoothness", 1, 100, "Smoothness")
+CreateSlider("FOV Radius", 10, 800, "FOV")
+CreateToggle("Full ESP (Pink)", "ESPEnabled")
+CreateToggle("Fast Speed", "SpeedEnabled")
+CreateSlider("Speed Power", 16, 250, "MaxSpeed")
+CreateToggle("Jump Boost", "JumpBoostEnabled")
+CreateSlider("Jump Power", 30, 200, "JumpPower")
+CreateToggle("Infinite Jump", "InfJump")
+CreateSlider("Gravity", 0, 196, "GravityValue")
 
 ----------------------------------------------------------------
--- // MOBILE BUTTON
+-- // MOBILE TOGGLE BUTTON
 ----------------------------------------------------------------
 
-local MobBtn = Instance.new("TextButton", MainGui)
-MobBtn.Size = UDim2.new(0, 55, 0, 55)
-MobBtn.Position = UDim2.new(0, 15, 0.4, 0)
-MobBtn.BackgroundColor3 = DarkBg
-MobBtn.Text = "JENZ"
-MobBtn.TextColor3 = PinkTheme
-MobBtn.Font = Enum.Font.GothamBold
-MobBtn.Draggable = true
-Instance.new("UICorner", MobBtn).CornerRadius = UDim.new(1, 0)
-local MobStroke = Instance.new("UIStroke", MobBtn)
+local MobileBtnMain = Instance.new("TextButton", MainGui)
+MobileBtnMain.Size, MobileBtnMain.Position = UDim2.new(0, 65, 0, 65), UDim2.new(0, 15, 0.45, 0)
+MobileBtnMain.Text, MobileBtnMain.BackgroundColor3, MobileBtnMain.Draggable = "JENZ", DarkBg, true
+MobileBtnMain.TextColor3, MobileBtnMain.Font = PinkTheme, Enum.Font.GothamBold
+local MobCorner = Instance.new("UICorner", MobileBtnMain)
+MobCorner.CornerRadius = UDim.new(1, 0)
+local MobStroke = Instance.new("UIStroke", MobileBtnMain)
 MobStroke.Color = PinkTheme
 MobStroke.Thickness = 2
 
-MobBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
+local MobContainer = Instance.new("Frame", MobileBtnMain)
+MobContainer.Size, MobContainer.Position, MobContainer.Visible = UDim2.new(0, 110, 0, 380), UDim2.new(1.2, 0, -2, 0), false
+MobContainer.BackgroundColor3, MobContainer.BackgroundTransparency = Color3.new(0,0,0), 0.4
+Instance.new("UIListLayout", MobContainer).Padding = UDim.new(0, 5)
+
+local function createMobileBtn(txt, setting)
+    local b = Instance.new("TextButton", MobContainer)
+    b.Size, b.TextColor3, b.Font = UDim2.new(1, 0, 0, 38), Color3.new(1,1,1), Enum.Font.GothamMedium
+    Instance.new("UICorner", b)
+    if setting then
+        b.MouseButton1Click:Connect(function() _G.JENZ_SETTINGS[setting] = not _G.JENZ_SETTINGS[setting] end)
+        RunService.RenderStepped:Connect(function()
+            b.Text = txt..(_G.JENZ_SETTINGS[setting] and ": ON" or ": OFF")
+            b.BackgroundColor3 = _G.JENZ_SETTINGS[setting] and PinkTheme or Color3.fromRGB(40,40,40)
+        end)
+    else
+        b.Text = txt
+        b.BackgroundColor3 = Color3.fromRGB(100, 20, 60)
+    end
+    return b
+end
+
+MobileBtnMain.MouseButton1Click:Connect(function() MobContainer.Visible = not MobContainer.Visible end)
+
+createMobileBtn("AIM", "Locking")
+createMobileBtn("ESP", "ESPEnabled")
+createMobileBtn("TAUNT").MouseButton1Click:Connect(function() SendTaunt() end)
+createMobileBtn("JUMP", "InfJump")
+createMobileBtn("SPD", "SpeedEnabled")
+createMobileBtn("DOWN").MouseButton1Click:Connect(function() _G.JENZ_SETTINGS.DownActive = true end)
 
 ----------------------------------------------------------------
--- // CORE LOGIC (AIMBOT & ESP)
+-- // CORE LOGIC & ESP
 ----------------------------------------------------------------
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = false -- Always hidden as per request
+FOVCircle.Thickness, FOVCircle.Color, FOVCircle.Filled, FOVCircle.Visible = 1.5, PinkTheme, false, true
 
-local function GetClosest()
+local ESP_Table = {}
+local function CreateESP(p)
+    if p == player then return end
+    local objects = {
+        Box = Drawing.new("Square"), HealthBar = Drawing.new("Square"), Name = Drawing.new("Text"), Distance = Drawing.new("Text")
+    }
+    objects.Box.Color, objects.Box.Thickness, objects.Box.Filled = PinkTheme, 1.5, false
+    objects.HealthBar.Thickness, objects.HealthBar.Filled = 1, true
+    objects.Name.Center, objects.Name.Outline, objects.Name.Size, objects.Name.Color = true, true, 14, Color3.new(1,1,1)
+    objects.Distance.Center, objects.Distance.Outline, objects.Distance.Size, objects.Distance.Color = true, true, 13, Color3.new(0.8,0.8,0.8)
+    ESP_Table[p] = objects
+end
+for _, p in pairs(Players:GetPlayers()) do CreateESP(p) end
+Players.PlayerAdded:Connect(CreateESP)
+
+RunService.RenderStepped:Connect(function(dt)
+    FOVCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+    FOVCircle.Radius = _G.JENZ_SETTINGS.FOV
+    
     local target, shortestDist = nil, _G.JENZ_SETTINGS.FOV
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
-            local pos, onScreen = camera:WorldToViewportPoint(p.Character.Head.Position)
-            if onScreen then
+        if p ~= player and p.Character and p.Character:FindFirstChild("Head") and p.Character.Humanoid.Health > 0 then
+            local head = p.Character.Head
+            local pos, onScreen = camera:WorldToViewportPoint(head.Position)
+            if onScreen and IsVisible(head) then
                 local dist = (Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2) - Vector2.new(pos.X, pos.Y)).Magnitude
-                if dist < shortestDist then
-                    target = p
-                    shortestDist = dist
-                end
+                if dist < shortestDist then shortestDist = dist target = p end
             end
         end
     end
-    return target
-end
 
-RunService.RenderStepped:Connect(function()
-    if _G.JENZ_SETTINGS.Locking then
-        local target = GetClosest()
-        if target then
-            camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(camera.CFrame.Position, target.Character.Head.Position), (_G.JENZ_SETTINGS.Smoothness / 10))
+    if _G.JENZ_SETTINGS.Locking and target then
+        local headPos = target.Character.Head.Position
+        if _G.JENZ_SETTINGS.Smoothness >= 1 then
+            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, headPos)
+        else
+            camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(camera.CFrame.Position, headPos), _G.JENZ_SETTINGS.Smoothness * (dt * 60))
         end
+    end
+    
+    if _G.JENZ_SETTINGS.HardLock and target and player.Character then
+        player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+    end
+
+    for p, v in pairs(ESP_Table) do
+        if _G.JENZ_SETTINGS.ESPEnabled and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp, hum = p.Character.HumanoidRootPart, p.Character.Humanoid
+            local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+            if onScreen and hum.Health > 0 then
+                local s = (1 / pos.Z) * 1000
+                local boxWidth, boxHeight = 2.2*s, 3.8*s
+                v.Box.Visible, v.Box.Size, v.Box.Position = true, Vector2.new(boxWidth, boxHeight), Vector2.new(pos.X - boxWidth/2, pos.Y - boxHeight/2)
+                
+                local hpPercent = hum.Health / hum.MaxHealth
+                v.HealthBar.Visible, v.HealthBar.Size = true, Vector2.new(2, boxHeight * hpPercent)
+                v.HealthBar.Position = Vector2.new(pos.X - boxWidth/2 - 6, (pos.Y + boxHeight/2) - (boxHeight * hpPercent))
+                v.HealthBar.Color = Color3.fromHSV(hpPercent * 0.3, 1, 1)
+                
+                v.Name.Visible, v.Name.Text, v.Name.Position = true, p.Name, Vector2.new(pos.X, pos.Y - boxHeight/2 - 16)
+                local distVal = math.floor((player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
+                v.Distance.Visible, v.Distance.Text, v.Distance.Position = true, distVal.."m", Vector2.new(pos.X, pos.Y + boxHeight/2 + 4)
+            else v.Box.Visible, v.HealthBar.Visible, v.Name.Visible, v.Distance.Visible = false, false, false, false end
+        else v.Box.Visible, v.HealthBar.Visible, v.Name.Visible, v.Distance.Visible = false, false, false, false end
     end
 end)
 
--- Basic ESP Box
-RunService.Heartbeat:Connect(function()
-    if _G.JENZ_SETTINGS.SpeedEnabled and player.Character then
-        local hum = player.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.MoveDirection.Magnitude > 0 then
-            player.Character:TranslateBy(hum.MoveDirection * (_G.JENZ_SETTINGS.MaxSpeed / 100))
+RunService.Heartbeat:Connect(function(dt)
+    workspace.Gravity = _G.JENZ_SETTINGS.GravityValue 
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp and hum then
+        if _G.JENZ_SETTINGS.DownActive then
+            hrp.Velocity = Vector3.new(hrp.Velocity.X, -_G.JENZ_SETTINGS.DropLimit, hrp.Velocity.Z)
+            _G.JENZ_SETTINGS.DownActive = false
+        end
+        if _G.JENZ_SETTINGS.SpeedEnabled and hum.MoveDirection.Magnitude > 0 then
+            local move = hum.MoveDirection * (_G.JENZ_SETTINGS.MaxSpeed / 5) * dt
+            hrp:PivotTo(hrp.CFrame + move)
         end
     end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if _G.JENZ_SETTINGS.InfJump and player.Character then
-        player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    if player.Character then
         local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Velocity = Vector3.new(hrp.Velocity.X, _G.JENZ_SETTINGS.JumpPower, hrp.Velocity.Z) end
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if hrp and hum then
+            if _G.JENZ_SETTINGS.InfJump or _G.JENZ_SETTINGS.JumpBoostEnabled then
+                local canJump = (_G.JENZ_SETTINGS.InfJump) or (hum:GetState() == Enum.HumanoidStateType.Running or hum:GetState() == Enum.HumanoidStateType.Landed)
+                if canJump then
+                    local boost = _G.JENZ_SETTINGS.JumpBoostEnabled and _G.JENZ_SETTINGS.JumpPower or 50
+                    hrp.Velocity = Vector3.new(hrp.Velocity.X, boost, hrp.Velocity.Z)
+                end
+            end
+        end
     end
 end)
