@@ -1,6 +1,6 @@
--- // JENZ HUB V1.0 | PINK EDITION
+-- // JENZ HUB V1.1 | PINK EDITION (UPDATED)
 -- // Optimized for Delta, Fluxus, & Hydrogen
--- // Updated Physics & Aesthetic UI
+-- // Added: Team Check, Show FOV Toggle, Distance-based ESP
 
 repeat task.wait() until game:IsLoaded()
 
@@ -16,6 +16,8 @@ _G.JENZ_SETTINGS = {
     Locking = false,
     HardLock = false, 
     WallCheck = false,
+    TeamCheck = false, -- [NEW]
+    ShowFOV = true,    -- [NEW]
     Smoothness = 1,
     FOV = 150,
     MaxSpeed = 75,
@@ -24,6 +26,7 @@ _G.JENZ_SETTINGS = {
     JumpBoostEnabled = false,
     JumpPower = 50,
     ESPEnabled = true,
+    ESPDistance = 1000, -- [NEW] Max range for ESP
     GravityValue = 196, 
     DownActive = false,
     DropLimit = 150
@@ -176,11 +179,14 @@ end
 
 -- // ASSEMBLE UI ELEMENTS
 CreateToggle("Aimbot Lock", "Locking")
+CreateToggle("Team Check", "TeamCheck") -- [NEW]
 CreateToggle("Wall Check", "WallCheck")
+CreateToggle("Show FOV Circle", "ShowFOV") -- [NEW]
 CreateToggle("Stick to Enemies", "HardLock")
 CreateSlider("Lock Smoothness", 1, 100, "Smoothness")
 CreateSlider("FOV Radius", 10, 800, "FOV")
 CreateToggle("Full ESP (Pink)", "ESPEnabled")
+CreateSlider("Max ESP Dist", 100, 5000, "ESPDistance") -- [NEW]
 CreateToggle("Fast Speed", "SpeedEnabled")
 CreateSlider("Speed Power", 16, 250, "MaxSpeed")
 CreateToggle("Jump Boost", "JumpBoostEnabled")
@@ -203,7 +209,7 @@ MobStroke.Color = PinkTheme
 MobStroke.Thickness = 2
 
 local MobContainer = Instance.new("Frame", MobileBtnMain)
-MobContainer.Size, MobContainer.Position, MobContainer.Visible = UDim2.new(0, 110, 0, 380), UDim2.new(1.2, 0, -2, 0), false
+MobContainer.Size, MobContainer.Position, MobContainer.Visible = UDim2.new(0, 110, 0, 420), UDim2.new(1.2, 0, -2.5, 0), false
 MobContainer.BackgroundColor3, MobContainer.BackgroundTransparency = Color3.new(0,0,0), 0.4
 Instance.new("UIListLayout", MobContainer).Padding = UDim.new(0, 5)
 
@@ -227,7 +233,9 @@ end
 MobileBtnMain.MouseButton1Click:Connect(function() MobContainer.Visible = not MobContainer.Visible end)
 
 createMobileBtn("AIM", "Locking")
+createMobileBtn("TEAM", "TeamCheck") -- [NEW]
 createMobileBtn("ESP", "ESPEnabled")
+createMobileBtn("FOV", "ShowFOV") -- [NEW]
 createMobileBtn("TAUNT").MouseButton1Click:Connect(function() SendTaunt() end)
 createMobileBtn("JUMP", "InfJump")
 createMobileBtn("SPD", "SpeedEnabled")
@@ -258,10 +266,14 @@ Players.PlayerAdded:Connect(CreateESP)
 RunService.RenderStepped:Connect(function(dt)
     FOVCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     FOVCircle.Radius = _G.JENZ_SETTINGS.FOV
+    FOVCircle.Visible = _G.JENZ_SETTINGS.ShowFOV -- Link to toggle
     
     local target, shortestDist = nil, _G.JENZ_SETTINGS.FOV
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("Head") and p.Character.Humanoid.Health > 0 then
+            -- Team Check Logic
+            if _G.JENZ_SETTINGS.TeamCheck and p.Team == player.Team then continue end
+
             local head = p.Character.Head
             local pos, onScreen = camera:WorldToViewportPoint(head.Position)
             if onScreen and IsVisible(head) then
@@ -285,10 +297,21 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     for p, v in pairs(ESP_Table) do
-        if _G.JENZ_SETTINGS.ESPEnabled and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp, hum = p.Character.HumanoidRootPart, p.Character.Humanoid
+        local char = p.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        -- Check if ESP should show (Distance check + Team check + Enabled)
+        local canShow = _G.JENZ_SETTINGS.ESPEnabled and hrp and hum and hum.Health > 0
+        if canShow then
+            local dist = (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if dist > _G.JENZ_SETTINGS.ESPDistance then canShow = false end
+            if _G.JENZ_SETTINGS.TeamCheck and p.Team == player.Team then canShow = false end
+        end
+
+        if canShow then
             local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
-            if onScreen and hum.Health > 0 then
+            if onScreen then
                 local s = (1 / pos.Z) * 1000
                 local boxWidth, boxHeight = 2.2*s, 3.8*s
                 v.Box.Visible, v.Box.Size, v.Box.Position = true, Vector2.new(boxWidth, boxHeight), Vector2.new(pos.X - boxWidth/2, pos.Y - boxHeight/2)
